@@ -22,6 +22,11 @@ MANIFEST_URL="https://github.com/AxionAOSP/android.git"
 MANIFEST_BRANCH="lineage-23.0"
 SYNC_JOBS="24"
 
+# Build configuration - modify these as needed
+BUILD_VARIANT="userdebug"                        # Build variant: user, userdebug, eng
+GMS_VARIANT="vanilla"                            # GMS variant: vanilla, gms pico, gms core
+BUILD_TYPE="-b"                                  # Build type: -b (bacon), -fb (fastboot), -br (brunch)
+
 # Device-specific repositories
 DEVICE_TREE_URL="https://github.com/AxionAOSP-devices/android_device_realme_spartan.git"
 DEVICE_TREE_BRANCH="lineage-23.0"
@@ -33,6 +38,8 @@ KERNEL_TREE_URL="https://github.com/bijoyv9/kernel_realme_RMX3371.git"
 KERNEL_TREE_BRANCH="phoeniX-AOSP"
 CAMERA_TREE_URL="https://gitlab.com/ryukftw/proprietary_vendor_oplus_camera.git"
 CAMERA_TREE_BRANCH="15.0"
+SIGNING_KEYS_URL="https://github.com/bijoyv9/axion-keys.git"
+SIGNING_KEYS_BRANCH="master"
 
 # Function to print colored output
 print_status() {
@@ -146,6 +153,10 @@ clone_device_repos() {
     print_status "Cloning camera tree..."
     git clone "$CAMERA_TREE_URL" -b "$CAMERA_TREE_BRANCH" "vendor/oplus/camera"
     
+    # Clone signing keys
+    print_status "Cloning signing keys..."
+    git clone "$SIGNING_KEYS_URL" -b "$SIGNING_KEYS_BRANCH" "vendor/lineage-priv"
+    
     print_success "All device repositories cloned successfully"
 }
 
@@ -158,22 +169,30 @@ build_rom() {
     print_status "Sourcing build environment..."
     source build/envsetup.sh
     
-    # Setup device
-    print_status "Setting up device configuration..."
-    lunch "lineage_${DEVICE}-userdebug"
+    # Setup device configuration
+    print_status "Setting up device configuration with AxionAOSP..."
+    if [ "$GMS_VARIANT" = "vanilla" ]; then
+        axion "$DEVICE" "$BUILD_VARIANT" vanilla
+    else
+        axion "$DEVICE" "$BUILD_VARIANT" "$GMS_VARIANT"
+    fi
     
     if [ $? -ne 0 ]; then
         print_error "Failed to setup device configuration"
         exit 1
     fi
     
+    # Run installclean
+    print_status "Running installclean..."
+    make installclean
+    
     # Get number of CPU cores for parallel compilation
     CORES=$(nproc)
     print_status "Starting build with $CORES parallel jobs..."
     
-    # Start the build
+    # Start the build using AxionAOSP build system
     print_status "Building ROM (this will take several hours)..."
-    mka bacon -j"$CORES"
+    ax "$BUILD_TYPE" -j"$CORES" "$BUILD_VARIANT"
     
     if [ $? -eq 0 ]; then
         print_success "ROM build completed successfully!"
@@ -194,7 +213,7 @@ build_rom() {
 clean_build() {
     print_status "Cleaning build directory..."
     cd "$BUILD_DIR"
-    make clean
+    make installclean
     print_success "Build directory cleaned"
 }
 
@@ -221,12 +240,70 @@ main() {
                 CLEAN_FIRST=true
                 shift
                 ;;
+            --gms)
+                case $2 in
+                    pico|core)
+                        GMS_VARIANT="gms $2"
+                        shift 2
+                        ;;
+                    *)
+                        GMS_VARIANT="gms core"
+                        shift
+                        ;;
+                esac
+                ;;
+            --vanilla)
+                GMS_VARIANT="vanilla"
+                shift
+                ;;
+            --variant)
+                case $2 in
+                    user|userdebug|eng)
+                        BUILD_VARIANT="$2"
+                        shift 2
+                        ;;
+                    *)
+                        print_error "Invalid build variant: $2. Use user, userdebug, or eng"
+                        exit 1
+                        ;;
+                esac
+                ;;
+            --build-type)
+                case $2 in
+                    bacon|-b)
+                        BUILD_TYPE="-b"
+                        shift 2
+                        ;;
+                    fastboot|-fb)
+                        BUILD_TYPE="-fb"
+                        shift 2
+                        ;;
+                    brunch|-br)
+                        BUILD_TYPE="-br"
+                        shift 2
+                        ;;
+                    *)
+                        print_error "Invalid build type: $2. Use bacon, fastboot, or brunch"
+                        exit 1
+                        ;;
+                esac
+                ;;
             --help|-h)
                 echo "Usage: $0 [OPTIONS]"
                 echo "Options:"
-                echo "  --skip-sync    Skip source sync (useful for rebuilds)"
-                echo "  --clean        Clean build directory before building"
-                echo "  --help, -h     Show this help message"
+                echo "  --skip-sync           Skip source sync (useful for rebuilds)"
+                echo "  --clean               Clean build directory before building"
+                echo "  --gms [pico|core]     Build with GMS (default: core)"
+                echo "  --vanilla             Build vanilla (no GMS)"
+                echo "  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)"
+                echo "  --build-type <type>   Build type: bacon, fastboot, brunch (default: bacon)"
+                echo "  --help, -h            Show this help message"
+                echo
+                echo "Examples:"
+                echo "  $0                    # Vanilla userdebug build"
+                echo "  $0 --gms core         # GMS core build"
+                echo "  $0 --gms pico         # GMS pico build"
+                echo "  $0 --variant user     # User variant build"
                 exit 0
                 ;;
             *)
@@ -244,6 +321,9 @@ main() {
     echo "  Build Directory: $BUILD_DIR"
     echo "  Manifest Branch: $MANIFEST_BRANCH"
     echo "  Sync Jobs: $SYNC_JOBS"
+    echo "  Build Variant: $BUILD_VARIANT"
+    echo "  GMS Variant: $GMS_VARIANT"
+    echo "  Build Type: $BUILD_TYPE"
     echo "  Skip Sync: $SKIP_SYNC"
     echo "  Clean First: $CLEAN_FIRST"
     echo
