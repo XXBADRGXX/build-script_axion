@@ -4,416 +4,134 @@ Automated build script for AxionAOSP custom ROM targeting Realme GT Neo 3T (spar
 
 ## 🚀 Quick Start
 
-### Download and Run (One Command)
 ```bash
+# One command install and run
 curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh | bash
-```
 
-### Download Script Only
-```bash
-curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh -o build.sh
-chmod +x build.sh
+# Or download first
+curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh -o build.sh && chmod +x build.sh
+./build.sh --gms core
 ```
 
 ## 📋 Prerequisites
 
-- Ubuntu/Debian Linux system
-- Minimum 500GB free disk space
-- 16GB+ RAM recommended
-- Fast internet connection
-- Git, repo tool, Python3, make, gcc installed
+**System Requirements:** Ubuntu/Debian Linux, 500GB+ disk space, 16GB+ RAM
 
-### Install Required Tools
+**Install Dependencies:**
 ```bash
-# Install repo tool
-mkdir -p ~/.bin
-curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
-chmod a+rx ~/.bin/repo
+# Repo tool
+mkdir -p ~/.bin && curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo && chmod a+rx ~/.bin/repo
+echo 'export PATH="${HOME}/.bin:${PATH}"' >> ~/.bashrc && source ~/.bashrc
 
-# Add to PATH (add to ~/.bashrc)
-export PATH="${HOME}/.bin:${PATH}"
-
-# Install dependencies
-sudo apt update
-sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3
+# Build tools
+sudo apt update && sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3
 ```
 
 ## 🛠️ Usage
 
-### First Time Build
+### Basic Commands
 ```bash
-# Default vanilla userdebug build
-./build.sh
-
-# First time GMS core build
-./build.sh --gms core
-
-# Show all available options
-./build.sh --help
+./build.sh --gms core                # First build (recommended)
+./build.sh --skip-sync --gms core    # Quick rebuild
+./build.sh --help                    # Show all options
 ```
 
-## ⚡ Skip Sync Options (For Rebuilds)
+### Build Options
 
-### Basic Skip Sync
+| Option | Description | Example |
+|--------|-------------|----------|
+| `--gms [pico\|core]` | Include Google services | `--gms core` |
+| `--vanilla` | No Google services (default) | `--vanilla` |
+| `--variant <type>` | user/userdebug/eng | `--variant user` |
+| `--build-type <type>` | bacon/fastboot/brunch | `--build-type fastboot` |
+| `--skip-sync` | Skip source download | `--skip-sync` |
+| `--skip-clone` | Skip device repo cloning | `--skip-clone` |
+| `--clean` | Clean build environment | `--clean` |
+| `--clean-repos` | Fresh device repositories | `--clean-repos` |
+
+### Common Workflows
 ```bash
-# Skip source sync (when you already have sources)
+# Development (daily)
 ./build.sh --skip-sync --gms core
 
-# Skip sync with different variants
-./build.sh --skip-sync --gms pico --variant user
-./build.sh --skip-sync --vanilla --variant eng
+# Production release
+./build.sh --variant user --gms core --clean --clean-repos
+
+# Quick test
+./build.sh --skip-sync --skip-clone --variant eng
+
+# Fresh start
+rm -rf ~/axion && ./build.sh --gms core
 ```
 
-### Skip Cloning (Fastest Rebuilds)
+## ⚡ Build Times
+
+| Type | Duration | Command |
+|------|----------|---------|
+| First build | 4-8 hours | `./build.sh --gms core` |
+| Incremental | 1-3 hours | `--skip-sync` |
+| Quick rebuild | 30min-2h | `--skip-sync --skip-clone` |
+
+## 🏗️ Build Process
+
+1. **Source Sync**: Downloads AxionAOSP source (~200GB)
+2. **Device Setup**: Clones 6 device-specific repositories
+3. **Configuration**: Uses AxionAOSP's `axion` command instead of `lunch`
+4. **Build**: Uses `ax` command instead of `make`/`mka`
+5. **Output**: ROM files in `~/axion/out/target/product/spartan/`
+
+### AxionAOSP Commands
 ```bash
-# Skip everything, just build (fastest option)
-./build.sh --skip-sync --skip-clone --gms core
+# Device configuration (replaces lunch)
+axion spartan user gms core
 
-# Skip cloning + clean build
-./build.sh --skip-sync --skip-clone --clean --gms core
-
-# Perfect for quick code testing
-./build.sh --skip-sync --skip-clone --variant eng --vanilla
+# Build execution (replaces mka)
+ax -b -j96 user
 ```
-
-### Clean Device Repositories
-```bash
-# Skip sync + clean device repos (fresh device files)
-./build.sh --skip-sync --clean-repos --gms core
-
-# Perfect for when device repos are updated
-./build.sh --skip-sync --clean-repos --gms core --variant user
-```
-
-### Complete Clean Rebuilds
-```bash
-# Skip sync + installclean + fresh device repos
-./build.sh --skip-sync --clean --clean-repos --gms core
-
-# Production clean build
-./build.sh --skip-sync --clean --clean-repos --gms core --variant user --build-type bacon
-```
-
-## 📝 Common Build Scenarios
-
-### Daily Development
-```bash
-# Quick rebuild after code changes
-./build.sh --skip-sync --gms core
-
-# Fastest rebuild (skip everything, just build)
-./build.sh --skip-sync --skip-clone --gms core
-
-# Clean rebuild with fresh device repos
-./build.sh --skip-sync --clean-repos --gms core
-```
-
-### Weekly Clean Build
-```bash
-# Complete clean build (keep sources, fresh everything else)
-./build.sh --skip-sync --clean --clean-repos --gms core --variant user
-```
-
-### Production Release
-```bash
-# Full production build
-./build.sh --skip-sync --clean --clean-repos --variant user --gms core --build-type bacon
-```
-
-### Testing Builds
-```bash
-# Fastboot images for testing
-./build.sh --skip-sync --build-type fastboot --gms pico
-
-# Engineering build for debugging
-./build.sh --skip-sync --variant eng --vanilla --clean-repos
-```
-
-## 🔧 Command Reference
-
-```bash
-# All available options
-./build.sh [OPTIONS]
-
-Options:
-  --skip-sync           Skip source sync (saves hours on rebuilds)
-  --clean               Clean build directory (runs installclean)
-  --clean-repos         Clean and re-clone device repositories
-  --skip-clone          Skip cloning device repositories (use existing)
-  --gms [pico|core]     Build with GMS (default: core)
-  --vanilla             Build vanilla (no GMS)
-  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)
-  --build-type <type>   Build type: bacon, fastboot, brunch (default: bacon)
-  --help, -h            Show help message
-
-Examples:
-  ./build.sh                                    # First time vanilla build
-  ./build.sh --gms core                         # First time GMS build
-  ./build.sh --skip-sync --gms core             # Quick rebuild
-  ./build.sh --skip-sync --clean-repos --gms core     # Fresh device repos
-  ./build.sh --skip-sync --skip-clone --clean --gms core     # Skip everything, just build
-  ./build.sh --skip-sync --clean --clean-repos --gms core --variant user  # Full clean rebuild
-```
-
-### Build Variants
-
-#### GMS Builds
-```bash
-# GMS Core build (recommended)
-./build.sh --gms core
-
-# GMS Pico build (minimal Google services)
-./build.sh --gms pico
-
-# GMS without specifying variant (defaults to core)
-./build.sh --gms
-```
-
-#### Vanilla Build
-```bash
-# Vanilla build (no Google services) - default
-./build.sh --vanilla
-```
-
-### Build Types
-```bash
-# Bacon build (full ROM) - default
-./build.sh --build-type bacon
-
-# Fastboot images only
-./build.sh --build-type fastboot
-
-# Brunch build
-./build.sh --build-type brunch
-```
-
-### Build Variants
-```bash
-# User variant (production)
-./build.sh --variant user
-
-# Engineering variant (debug)
-./build.sh --variant eng
-
-# Userdebug variant (default)
-./build.sh --variant userdebug
-```
-
-### Advanced Options
-```bash
-# Skip source sync (for rebuilds)
-./build.sh --skip-sync --gms core
-
-# Clean build
-./build.sh --clean --gms pico
-
-# Combined options
-./build.sh --gms core --variant user --build-type bacon --clean
-```
-
-## 📁 What Gets Built
-
-The script automatically handles:
-
-1. **Source Sync**: Downloads AxionAOSP source code
-2. **Device Repositories**:
-   - Device tree (realme spartan)
-   - Vendor blobs
-   - Hardware/oplus
-   - Kernel (phoeniX-AOSP)
-   - Camera blobs
-   - Signing keys
-3. **Build Process**: Uses AxionAOSP's custom build system
-
-## 🔧 AxionAOSP Build System
-
-This script uses AxionAOSP's custom build commands instead of standard AOSP:
-
-### Device Configuration (replaces `lunch`)
-```bash
-# AxionAOSP uses 'axion' command:
-axion <device> <variant> [gms <type> | vanilla]
-
-# Examples the script generates:
-axion spartan user vanilla          # Vanilla user build
-axion spartan userdebug gms core    # GMS core userdebug build  
-axion spartan eng gms pico           # GMS pico engineering build
-```
-
-### Build Command (replaces `mka`/`m`)
-```bash
-# AxionAOSP uses 'ax' command:
-ax <build_type> -j<jobs> <variant>
-
-# Examples the script generates:
-ax -b -j96 user                      # Bacon build, 96 jobs, user variant
-ax -fb -j96 userdebug               # Fastboot build, 96 jobs, userdebug
-ax -br -j96 eng                     # Brunch build, 96 jobs, engineering
-```
-
-## 🏗️ Build Process Flow
-
-1. **Requirements Check**: Verifies tools and disk space
-2. **Setup**: Creates build directory (`~/axion`)
-3. **Source Sync**: Downloads ROM sources (skipped with `--skip-sync`)
-4. **Device Setup**: Clones device repositories (cleaned with `--clean-repos`)
-5. **Environment**: Sources `build/envsetup.sh`
-6. **Configuration**: Runs `axion` command with proper GMS variant handling
-7. **Clean**: Runs `make installclean` (if `--clean` specified)
-8. **Build**: Executes `ax` build command with optimal job count
-
-## 📂 Directory Structure
-
-```
-~/axion/                              # Build directory
-├── .repo/                           # Repo metadata
-├── device/realme/spartan/           # Device tree
-├── vendor/realme/spartan/           # Vendor blobs
-├── vendor/lineage-priv/             # Signing keys
-├── vendor/oplus/camera/             # Camera blobs
-├── hardware/oplus/                  # Hardware abstraction
-├── kernel/realme/sm8250/            # Kernel source
-└── out/target/product/spartan/      # Build output
-```
-
-## 🔧 Configuration
-
-Edit the script variables at the top to customize:
-
-```bash
-DEVICE="spartan"                     # Target device
-BUILD_DIR="$HOME/axion"              # Build directory
-SYNC_JOBS="24"                       # Parallel sync jobs
-BUILD_VARIANT="userdebug"            # Default build variant
-GMS_VARIANT="vanilla"                # Default GMS variant
-BUILD_TYPE="-b"                      # Default build type
-```
-
-## ⚡ Build Optimization Tips
-
-### For Regular Development
-```bash
-# First build (sync everything)
-./build.sh --gms core
-
-# Daily rebuilds (skip sync)
-./build.sh --skip-sync --gms core
-
-# When device repos are updated
-./build.sh --skip-sync --clean-repos --gms core
-```
-
-### For Clean Builds
-```bash
-# Clean build with existing repos
-./build.sh --skip-sync --clean --gms core
-
-# Complete fresh build (repos + build clean)
-./build.sh --skip-sync --clean-repos --clean --gms core
-```
-
-### For Different Variants
-```bash
-# Switch from userdebug to user
-./build.sh --skip-sync --clean --variant user --gms core
-
-# Switch from vanilla to GMS
-./build.sh --skip-sync --clean-repos --gms core
-```
-
-## 📊 Build Time Estimates
-
-- **First Build**: 4-8 hours (full sync + build)
-- **Skip Sync Build**: 1-3 hours (just device repos + build)
-- **Skip Sync + Clean Repos**: 1.5-3.5 hours (fresh device repos + build)
-- **Skip Sync + Clean**: 1-3 hours (installclean + build)
-- **Skip Sync + Skip Clone**: 30 minutes - 2 hours (fastest, just build)
-- **Skip Everything + Clean**: 1-2 hours (installclean + build only)
 
 ## 🔍 Troubleshooting
 
-### Common Issues & Solutions
+| Issue | Solution |
+|-------|----------|
+| Out of space | Ensure 500GB+ available |
+| Sync failures | Use `--skip-sync` for rebuilds |
+| Build errors | Check `~/axion/out/build.log` |
+| Device repo conflicts | Use `--clean-repos` |
+| Environment issues | Use `--clean` |
 
-1. **Out of Space**: Ensure 500GB+ free space
-2. **Sync Failures**: Check internet connection, try reducing `SYNC_JOBS`
-3. **Build Failures**: Check logs in `out/` directory  
-4. **Missing Dependencies**: Run the prerequisite installation commands
-5. **"Multiple device names detected"**: Fixed - script now properly handles GMS variants
-6. **"No rule to make target 'installclean'"**: Fixed - clean runs after environment setup
-7. **Device repo conflicts**: Use `--clean-repos` to get fresh device repositories
+### Debug Commands
 ```bash
-# Check build logs
+# View build logs
 tail -f ~/axion/out/build.log
 
-# Check specific errors
-grep -i error ~/axion/out/build.log
+# Reset everything
+rm -rf ~/axion && ./build.sh --gms core
+
+# Test manually
+cd ~/axion && . build/envsetup.sh && axion spartan userdebug gms core
 ```
 
-### Reset Options
-```bash
-# Clean device repos only (when device repos are updated)
-./build.sh --skip-sync --clean-repos --gms core
-
-# Clean build environment (when switching variants)
-./build.sh --skip-sync --clean --gms core
-
-# Both clean options (complete rebuild without source sync)
-./build.sh --skip-sync --clean --clean-repos --gms core
-
-# Complete fresh start (nuclear option)
-rm -rf ~/axion
-./build.sh --gms core
+## 📂 Directory Structure
 ```
-
-### Debug Build Issues
-```bash
-# Test axion command manually
-. build/envsetup.sh
-axion spartan userdebug gms core
-
-# Test ax command manually  
-ax -b -j4 userdebug
-
-# Check AxionAOSP build system
-ax --help
-```
-
-## 📝 Examples
-
-### Complete First Build
-```bash
-# Download and run vanilla build
-curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh | bash
-```
-
-### GMS Core Build
-```bash
-./build.sh --gms core
-```
-
-### Quick Rebuild
-```bash
-./build.sh --skip-sync --gms core
-```
-
-### Production Build
-```bash
-./build.sh --variant user --gms core --clean
+~/axion/
+├── device/realme/spartan/          # Device configuration
+├── vendor/realme/spartan/          # Proprietary files
+├── kernel/realme/sm8250/           # Kernel source
+├── hardware/oplus/                 # Hardware support
+└── out/target/product/spartan/     # Build output
 ```
 
 ## 🎯 Target Device
 
-- **Device**: Realme GT Neo 3T
-- **Codename**: spartan
-- **Platform**: SM8250 (Snapdragon 870)
+- **Device**: Realme GT Neo 3T (spartan)
+- **Platform**: Snapdragon 870 (SM8250)
 - **ROM**: AxionAOSP (LineageOS 23.0 based)
 
 ## 📞 Support
 
-For issues related to:
-- **Script**: Check the script logs and error messages
-- **AxionAOSP**: Visit AxionAOSP community channels
-- **Device**: Check device-specific forums
+- Script issues: Check logs and error messages
+- ROM issues: Visit AxionAOSP community
+- Device specific: Check XDA forums
 
 ---
 
