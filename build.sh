@@ -266,6 +266,7 @@ main() {
     SKIP_SYNC=false
     CLEAN_FIRST=false
     CLEAN_REPOS=false
+    SKIP_CLONE=false
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -279,6 +280,10 @@ main() {
                 ;;
             --clean-repos)
                 CLEAN_REPOS=true
+                shift
+                ;;
+            --skip-clone)
+                SKIP_CLONE=true
                 shift
                 ;;
             --gms)
@@ -335,6 +340,7 @@ main() {
                 echo "  --skip-sync           Skip source sync (useful for rebuilds)"
                 echo "  --clean               Clean build directory before building"
                 echo "  --clean-repos         Clean and re-clone device repositories"
+                echo "  --skip-clone          Skip cloning device repositories"
                 echo "  --gms [pico|core]     Build with GMS (default: core)"
                 echo "  --vanilla             Build vanilla (no GMS)"
                 echo "  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)"
@@ -369,6 +375,7 @@ main() {
     echo "  Skip Sync: $SKIP_SYNC"
     echo "  Clean First: $CLEAN_FIRST"
     echo "  Clean Repos: $CLEAN_REPOS"
+    echo "  Skip Clone: $SKIP_CLONE"
     echo
     
     # Confirmation
@@ -404,7 +411,18 @@ main() {
         clean_device_repos
     fi
     
-    clone_device_repos
+    # Clone device repos unless skipped
+    if [ "$SKIP_CLONE" = false ]; then
+        clone_device_repos
+    else
+        print_warning "Skipping device repository cloning as requested"
+        # Verify essential device repos exist
+        if [ ! -d "$BUILD_DIR/device/realme/$DEVICE" ]; then
+            print_error "Device tree not found. Cannot skip cloning without existing device repos."
+            exit 1
+        fi
+    fi
+    
     build_rom
     
     # Calculate and display build time

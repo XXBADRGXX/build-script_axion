@@ -64,6 +64,18 @@ sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev l
 ./build.sh --skip-sync --vanilla --variant eng
 ```
 
+### Skip Cloning (Fastest Rebuilds)
+```bash
+# Skip everything, just build (fastest option)
+./build.sh --skip-sync --skip-clone --gms core
+
+# Skip cloning + clean build
+./build.sh --skip-sync --skip-clone --clean --gms core
+
+# Perfect for quick code testing
+./build.sh --skip-sync --skip-clone --variant eng --vanilla
+```
+
 ### Clean Device Repositories
 ```bash
 # Skip sync + clean device repos (fresh device files)
@@ -88,6 +100,9 @@ sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev l
 ```bash
 # Quick rebuild after code changes
 ./build.sh --skip-sync --gms core
+
+# Fastest rebuild (skip everything, just build)
+./build.sh --skip-sync --skip-clone --gms core
 
 # Clean rebuild with fresh device repos
 ./build.sh --skip-sync --clean-repos --gms core
@@ -124,6 +139,7 @@ Options:
   --skip-sync           Skip source sync (saves hours on rebuilds)
   --clean               Clean build directory (runs installclean)
   --clean-repos         Clean and re-clone device repositories
+  --skip-clone          Skip cloning device repositories (use existing)
   --gms [pico|core]     Build with GMS (default: core)
   --vanilla             Build vanilla (no GMS)
   --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)
@@ -135,6 +151,7 @@ Examples:
   ./build.sh --gms core                         # First time GMS build
   ./build.sh --skip-sync --gms core             # Quick rebuild
   ./build.sh --skip-sync --clean-repos --gms core     # Fresh device repos
+  ./build.sh --skip-sync --skip-clone --clean --gms core     # Skip everything, just build
   ./build.sh --skip-sync --clean --clean-repos --gms core --variant user  # Full clean rebuild
 ```
 
@@ -310,6 +327,8 @@ BUILD_TYPE="-b"                      # Default build type
 - **Skip Sync Build**: 1-3 hours (just device repos + build)
 - **Skip Sync + Clean Repos**: 1.5-3.5 hours (fresh device repos + build)
 - **Skip Sync + Clean**: 1-3 hours (installclean + build)
+- **Skip Sync + Skip Clone**: 30 minutes - 2 hours (fastest, just build)
+- **Skip Everything + Clean**: 1-2 hours (installclean + build only)
 
 ## 🔍 Troubleshooting
 
