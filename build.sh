@@ -229,7 +229,7 @@ build_rom() {
         print_success "ROM build completed successfully!"
         
         # Find the output file
-        OUTPUT_FILE=$(find "$BUILD_DIR/out/target/product/$DEVICE" -name "*.zip" -type f | grep -E "(lineage|axion)" | head -1)
+        OUTPUT_FILE=$(find "$BUILD_DIR/out/target/product/$DEVICE" -maxdepth 1 -name "*axion*.zip" | head -1)
         if [ -n "$OUTPUT_FILE" ]; then
             print_success "ROM file created: $OUTPUT_FILE"
             ls -lh "$OUTPUT_FILE"
