@@ -1,6 +1,6 @@
 # AxionAOSP ROM Build Script
 
-Automated build script for AxionAOSP custom ROM targeting Realme GT Master Edition (spartan).
+Automated build script for AxionAOSP custom ROM targeting Realme GT Neo 3T (spartan).
 
 ## 🚀 Quick Start
 
@@ -208,15 +208,42 @@ The script automatically handles:
    - Signing keys
 3. **Build Process**: Uses AxionAOSP's custom build system
 
-## 🏗️ Build Process
+## 🔧 AxionAOSP Build System
+
+This script uses AxionAOSP's custom build commands instead of standard AOSP:
+
+### Device Configuration (replaces `lunch`)
+```bash
+# AxionAOSP uses 'axion' command:
+axion <device> <variant> [gms <type> | vanilla]
+
+# Examples the script generates:
+axion spartan user vanilla          # Vanilla user build
+axion spartan userdebug gms core    # GMS core userdebug build  
+axion spartan eng gms pico           # GMS pico engineering build
+```
+
+### Build Command (replaces `mka`/`m`)
+```bash
+# AxionAOSP uses 'ax' command:
+ax <build_type> -j<jobs> <variant>
+
+# Examples the script generates:
+ax -b -j96 user                      # Bacon build, 96 jobs, user variant
+ax -fb -j96 userdebug               # Fastboot build, 96 jobs, userdebug
+ax -br -j96 eng                     # Brunch build, 96 jobs, engineering
+```
+
+## 🏗️ Build Process Flow
 
 1. **Requirements Check**: Verifies tools and disk space
 2. **Setup**: Creates build directory (`~/axion`)
-3. **Source Sync**: Downloads ROM sources (if not skipped)
-4. **Device Setup**: Clones all device-specific repositories
-5. **Configuration**: Sets up build environment with `axion` command
-6. **Clean**: Runs `make installclean`
-7. **Build**: Executes `ax` build command with optimal job count
+3. **Source Sync**: Downloads ROM sources (skipped with `--skip-sync`)
+4. **Device Setup**: Clones device repositories (cleaned with `--clean-repos`)
+5. **Environment**: Sources `build/envsetup.sh`
+6. **Configuration**: Runs `axion` command with proper GMS variant handling
+7. **Clean**: Runs `make installclean` (if `--clean` specified)
+8. **Build**: Executes `ax` build command with optimal job count
 
 ## 📂 Directory Structure
 
@@ -286,14 +313,15 @@ BUILD_TYPE="-b"                      # Default build type
 
 ## 🔍 Troubleshooting
 
-### Common Issues
+### Common Issues & Solutions
 
 1. **Out of Space**: Ensure 500GB+ free space
 2. **Sync Failures**: Check internet connection, try reducing `SYNC_JOBS`
-3. **Build Failures**: Check logs in `out/` directory
+3. **Build Failures**: Check logs in `out/` directory  
 4. **Missing Dependencies**: Run the prerequisite installation commands
-
-### Build Logs
+5. **"Multiple device names detected"**: Fixed - script now properly handles GMS variants
+6. **"No rule to make target 'installclean'"**: Fixed - clean runs after environment setup
+7. **Device repo conflicts**: Use `--clean-repos` to get fresh device repositories
 ```bash
 # Check build logs
 tail -f ~/axion/out/build.log
@@ -304,15 +332,31 @@ grep -i error ~/axion/out/build.log
 
 ### Reset Options
 ```bash
-# Clean device repos only
+# Clean device repos only (when device repos are updated)
 ./build.sh --skip-sync --clean-repos --gms core
 
-# Clean build environment
+# Clean build environment (when switching variants)
 ./build.sh --skip-sync --clean --gms core
+
+# Both clean options (complete rebuild without source sync)
+./build.sh --skip-sync --clean --clean-repos --gms core
 
 # Complete fresh start (nuclear option)
 rm -rf ~/axion
 ./build.sh --gms core
+```
+
+### Debug Build Issues
+```bash
+# Test axion command manually
+. build/envsetup.sh
+axion spartan userdebug gms core
+
+# Test ax command manually  
+ax -b -j4 userdebug
+
+# Check AxionAOSP build system
+ax --help
 ```
 
 ## 📝 Examples
@@ -340,7 +384,7 @@ curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh 
 
 ## 🎯 Target Device
 
-- **Device**: Realme GT Master Edition
+- **Device**: Realme GT Neo 3T
 - **Codename**: spartan
 - **Platform**: SM8250 (Snapdragon 870)
 - **ROM**: AxionAOSP (LineageOS 23.0 based)

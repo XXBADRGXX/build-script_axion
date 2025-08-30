@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AxionAOSP Custom ROM Build Script
-# Device: Realme GT Master Edition (spartan)
+# Device: Realme GT Neo 3T (spartan)
 # Author: Generated for bijoyv9
 # Created: August 30, 2025
 
@@ -198,6 +198,10 @@ build_rom() {
     print_status "Setting up device configuration with AxionAOSP..."
     if [ "$GMS_VARIANT" = "vanilla" ]; then
         axion "$DEVICE" "$BUILD_VARIANT" vanilla
+    elif [ "$GMS_VARIANT" = "gms core" ]; then
+        axion "$DEVICE" "$BUILD_VARIANT" gms core
+    elif [ "$GMS_VARIANT" = "gms pico" ]; then
+        axion "$DEVICE" "$BUILD_VARIANT" gms pico
     else
         axion "$DEVICE" "$BUILD_VARIANT" "$GMS_VARIANT"
     fi
@@ -254,7 +258,7 @@ main() {
     clear
     echo -e "${BLUE}================================${NC}"
     echo -e "${BLUE}  $ROM_NAME Custom ROM Builder  ${NC}"
-    echo -e "${BLUE}  Device: Realme GT Master Edition${NC}"
+    echo -e "${BLUE}  Device: Realme GT Neo 3t      ${NC}"
     echo -e "${BLUE}================================${NC}"
     echo
     
