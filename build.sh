@@ -128,6 +128,31 @@ sync_sources() {
     print_success "ROM sources synced successfully"
 }
 
+# Function to clean existing device repositories
+clean_device_repos() {
+    print_status "Cleaning existing device repositories..."
+    cd "$BUILD_DIR"
+    
+    # List of device repo directories to clean
+    DEVICE_DIRS=(
+        "device/realme/$DEVICE"
+        "vendor/realme/$DEVICE"
+        "hardware/oplus"
+        "kernel/realme/sm8250"
+        "vendor/oplus/camera"
+        "vendor/lineage-priv"
+    )
+    
+    for dir in "${DEVICE_DIRS[@]}"; do
+        if [ -d "$dir" ]; then
+            print_status "Removing $dir"
+            rm -rf "$dir"
+        fi
+    done
+    
+    print_success "Device repositories cleaned"
+}
+
 # Function to clone device-specific repositories
 clone_device_repos() {
     print_status "Cloning device-specific repositories..."
@@ -236,6 +261,7 @@ main() {
     # Parse command line arguments
     SKIP_SYNC=false
     CLEAN_FIRST=false
+    CLEAN_REPOS=false
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -245,6 +271,10 @@ main() {
                 ;;
             --clean)
                 CLEAN_FIRST=true
+                shift
+                ;;
+            --clean-repos)
+                CLEAN_REPOS=true
                 shift
                 ;;
             --gms)
@@ -300,6 +330,7 @@ main() {
                 echo "Options:"
                 echo "  --skip-sync           Skip source sync (useful for rebuilds)"
                 echo "  --clean               Clean build directory before building"
+                echo "  --clean-repos         Clean and re-clone device repositories"
                 echo "  --gms [pico|core]     Build with GMS (default: core)"
                 echo "  --vanilla             Build vanilla (no GMS)"
                 echo "  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)"
@@ -333,6 +364,7 @@ main() {
     echo "  Build Type: $BUILD_TYPE"
     echo "  Skip Sync: $SKIP_SYNC"
     echo "  Clean First: $CLEAN_FIRST"
+    echo "  Clean Repos: $CLEAN_REPOS"
     echo
     
     # Confirmation
@@ -361,6 +393,11 @@ main() {
             print_error "No existing repo found in $BUILD_DIR. Cannot skip sync."
             exit 1
         fi
+    fi
+    
+    # Clean and re-clone device repos if requested
+    if [ "$CLEAN_REPOS" = true ]; then
+        clean_device_repos
     fi
     
     clone_device_repos
