@@ -182,9 +182,11 @@ build_rom() {
         exit 1
     fi
     
-    # Run installclean
-    print_status "Running installclean..."
-    make installclean
+    # Run installclean if this is a clean build
+    if [ "$CLEAN_FIRST" = true ]; then
+        print_status "Running installclean for clean build..."
+        make installclean
+    fi
     
     # Get number of CPU cores for parallel compilation
     CORES=$(nproc)
@@ -209,11 +211,16 @@ build_rom() {
     fi
 }
 
-# Function to clean build (optional)
+# Function to clean build (optional) - only for complete clean
 clean_build() {
     print_status "Cleaning build directory..."
     cd "$BUILD_DIR"
-    make installclean
+    if [ -f "build/envsetup.sh" ]; then
+        source build/envsetup.sh
+        make installclean
+    else
+        print_warning "Build environment not found, skipping clean"
+    fi
     print_success "Build directory cleaned"
 }
 
@@ -343,10 +350,7 @@ main() {
     check_requirements
     setup_build_dir
     
-    # Clean if requested
-    if [ "$CLEAN_FIRST" = true ] && [ -d "$BUILD_DIR" ]; then
-        clean_build
-    fi
+    # Note: Clean will be handled after build environment setup
     
     # Sync sources (unless skipped)
     if [ "$SKIP_SYNC" = false ]; then
