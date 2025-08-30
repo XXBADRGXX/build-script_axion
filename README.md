@@ -40,13 +40,102 @@ sudo apt install git-core gnupg flex bison build-essential zip curl zlib1g-dev l
 
 ## 🛠️ Usage
 
-### Basic Usage
+### First Time Build
 ```bash
 # Default vanilla userdebug build
 ./build.sh
 
-# Show help
+# First time GMS core build
+./build.sh --gms core
+
+# Show all available options
 ./build.sh --help
+```
+
+## ⚡ Skip Sync Options (For Rebuilds)
+
+### Basic Skip Sync
+```bash
+# Skip source sync (when you already have sources)
+./build.sh --skip-sync --gms core
+
+# Skip sync with different variants
+./build.sh --skip-sync --gms pico --variant user
+./build.sh --skip-sync --vanilla --variant eng
+```
+
+### Clean Device Repositories
+```bash
+# Skip sync + clean device repos (fresh device files)
+./build.sh --skip-sync --clean-repos --gms core
+
+# Perfect for when device repos are updated
+./build.sh --skip-sync --clean-repos --gms core --variant user
+```
+
+### Complete Clean Rebuilds
+```bash
+# Skip sync + installclean + fresh device repos
+./build.sh --skip-sync --clean --clean-repos --gms core
+
+# Production clean build
+./build.sh --skip-sync --clean --clean-repos --gms core --variant user --build-type bacon
+```
+
+## 📝 Common Build Scenarios
+
+### Daily Development
+```bash
+# Quick rebuild after code changes
+./build.sh --skip-sync --gms core
+
+# Clean rebuild with fresh device repos
+./build.sh --skip-sync --clean-repos --gms core
+```
+
+### Weekly Clean Build
+```bash
+# Complete clean build (keep sources, fresh everything else)
+./build.sh --skip-sync --clean --clean-repos --gms core --variant user
+```
+
+### Production Release
+```bash
+# Full production build
+./build.sh --skip-sync --clean --clean-repos --variant user --gms core --build-type bacon
+```
+
+### Testing Builds
+```bash
+# Fastboot images for testing
+./build.sh --skip-sync --build-type fastboot --gms pico
+
+# Engineering build for debugging
+./build.sh --skip-sync --variant eng --vanilla --clean-repos
+```
+
+## 🔧 Command Reference
+
+```bash
+# All available options
+./build.sh [OPTIONS]
+
+Options:
+  --skip-sync           Skip source sync (saves hours on rebuilds)
+  --clean               Clean build directory (runs installclean)
+  --clean-repos         Clean and re-clone device repositories
+  --gms [pico|core]     Build with GMS (default: core)
+  --vanilla             Build vanilla (no GMS)
+  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)
+  --build-type <type>   Build type: bacon, fastboot, brunch (default: bacon)
+  --help, -h            Show help message
+
+Examples:
+  ./build.sh                                    # First time vanilla build
+  ./build.sh --gms core                         # First time GMS build
+  ./build.sh --skip-sync --gms core             # Quick rebuild
+  ./build.sh --skip-sync --clean-repos --gms core     # Fresh device repos
+  ./build.sh --skip-sync --clean --clean-repos --gms core --variant user  # Full clean rebuild
 ```
 
 ### Build Variants
@@ -156,11 +245,44 @@ GMS_VARIANT="vanilla"                # Default GMS variant
 BUILD_TYPE="-b"                      # Default build type
 ```
 
+## ⚡ Build Optimization Tips
+
+### For Regular Development
+```bash
+# First build (sync everything)
+./build.sh --gms core
+
+# Daily rebuilds (skip sync)
+./build.sh --skip-sync --gms core
+
+# When device repos are updated
+./build.sh --skip-sync --clean-repos --gms core
+```
+
+### For Clean Builds
+```bash
+# Clean build with existing repos
+./build.sh --skip-sync --clean --gms core
+
+# Complete fresh build (repos + build clean)
+./build.sh --skip-sync --clean-repos --clean --gms core
+```
+
+### For Different Variants
+```bash
+# Switch from userdebug to user
+./build.sh --skip-sync --clean --variant user --gms core
+
+# Switch from vanilla to GMS
+./build.sh --skip-sync --clean-repos --gms core
+```
+
 ## 📊 Build Time Estimates
 
-- **First Build**: 4-8 hours (depending on hardware)
-- **Incremental Build**: 30 minutes - 2 hours
-- **Clean Build**: 2-4 hours
+- **First Build**: 4-8 hours (full sync + build)
+- **Skip Sync Build**: 1-3 hours (just device repos + build)
+- **Skip Sync + Clean Repos**: 1.5-3.5 hours (fresh device repos + build)
+- **Skip Sync + Clean**: 1-3 hours (installclean + build)
 
 ## 🔍 Troubleshooting
 
@@ -180,14 +302,17 @@ tail -f ~/axion/out/build.log
 grep -i error ~/axion/out/build.log
 ```
 
-### Reset Build
+### Reset Options
 ```bash
-# Clean and restart
-./build.sh --clean
+# Clean device repos only
+./build.sh --skip-sync --clean-repos --gms core
 
-# Complete fresh start
+# Clean build environment
+./build.sh --skip-sync --clean --gms core
+
+# Complete fresh start (nuclear option)
 rm -rf ~/axion
-./build.sh
+./build.sh --gms core
 ```
 
 ## 📝 Examples
