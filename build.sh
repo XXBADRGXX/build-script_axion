@@ -41,7 +41,9 @@ HW_OPLUS_BRANCH="lineage-23.0"
 KERNEL_TREE_URL="https://github.com/SM8250-Common/android_kernel_realme_sm8250.git"
 KERNEL_TREE_BRANCH="lineage-23.0"
 CAMERA_TREE_URL="https://gitlab.com/ryukftw/proprietary_vendor_oplus_camera.git"
-CAMERA_TREE_BRANCH="15.0"
+CAMERA_TREE_BRANCH="lineage-23.0"
+HW_DOLBY_URL="https://github.com/SM8250-Common/hardware_dolby.git"
+HW_DOLBY_BRANCH="16"
 SIGNING_KEYS_URL="https://github.com/bijoyv9/axion-keys.git"
 SIGNING_KEYS_BRANCH="master"
 
@@ -144,6 +146,7 @@ clean_device_repos() {
         "vendor/realme/$DEVICE"
         "vendor/realme/sm8250-common"
         "hardware/oplus"
+        "hardware/dolby"
         "kernel/realme/sm8250"
         "vendor/oplus/camera"
         "vendor/lineage-priv"
@@ -191,7 +194,11 @@ clone_device_repos() {
     # Clone camera tree
     print_status "Cloning camera tree..."
     git clone "$CAMERA_TREE_URL" -b "$CAMERA_TREE_BRANCH" "vendor/oplus/camera"
-    
+
+    # Clone hardware/dolby
+    print_status "Cloning hardware/dolby..."
+    git clone "$HW_DOLBY_URL" -b "$HW_DOLBY_BRANCH" "hardware/dolby"
+
     # Clone signing keys
     print_status "Cloning signing keys..."
     git clone "$SIGNING_KEYS_URL" -b "$SIGNING_KEYS_BRANCH" "vendor/lineage-priv"
