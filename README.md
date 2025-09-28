@@ -6,10 +6,10 @@ Automated build script for AxionAOSP custom ROM targeting Realme GT Neo 3T (spar
 
 ```bash
 # One command install and run
-curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SM8250-Common/build-script_axion/main/build.sh | bash
 
 # Or download first
-curl -fsSL https://raw.githubusercontent.com/bijoyv9/build-script/main/build.sh -o build.sh && chmod +x build.sh
+curl -fsSL https://raw.githubusercontent.com/SM8250-Common/build-script_axion/main/build.sh -o build.sh && chmod +x build.sh
 ./build.sh --gms core
 ```
 
