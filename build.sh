@@ -30,12 +30,16 @@ BUILD_TYPE="-b"                                  # Build type: -b (bacon), -fb (
 # Device-specific repositories
 DEVICE_TREE_URL="https://github.com/AxionAOSP-devices/android_device_realme_spartan.git"
 DEVICE_TREE_BRANCH="lineage-23.0"
+DEVICE_COMMON_TREE_URL="https://github.com/AxionAOSP-devices/android_device_realme_sm8250-common.git"
+DEVICE_COMMON_TREE_BRANCH="lineage-23.0"
 VENDOR_TREE_URL="https://github.com/AxionAOSP-devices/proprietary_vendor_realme_spartan.git"
 VENDOR_TREE_BRANCH="lineage-23.0"
+VENDOR_COMMON_TREE_URL="https://github.com/AxionAOSP-devices/proprietary_vendor_realme_sm8250-common.git"
+VENDOR_COMMON_TREE_BRANCH="lineage-23.0"
 HW_OPLUS_URL="https://github.com/AxionAOSP-devices/android_hardware_oplus.git"
 HW_OPLUS_BRANCH="lineage-23.0"
-KERNEL_TREE_URL="https://github.com/bijoyv9/kernel_realme_RMX3371.git"
-KERNEL_TREE_BRANCH="phoeniX-AOSP"
+KERNEL_TREE_URL="https://github.com/SM8250-Common/android_kernel_realme_sm8250.git"
+KERNEL_TREE_BRANCH="lineage-23.0"
 CAMERA_TREE_URL="https://gitlab.com/ryukftw/proprietary_vendor_oplus_camera.git"
 CAMERA_TREE_BRANCH="15.0"
 SIGNING_KEYS_URL="https://github.com/bijoyv9/axion-keys.git"
@@ -136,7 +140,9 @@ clean_device_repos() {
     # List of device repo directories to clean
     DEVICE_DIRS=(
         "device/realme/$DEVICE"
+        "device/realme/sm8250-common"
         "vendor/realme/$DEVICE"
+        "vendor/realme/sm8250-common"
         "hardware/oplus"
         "kernel/realme/sm8250"
         "vendor/oplus/camera"
@@ -161,10 +167,18 @@ clone_device_repos() {
     # Clone device tree
     print_status "Cloning device tree..."
     git clone "$DEVICE_TREE_URL" -b "$DEVICE_TREE_BRANCH" "device/realme/$DEVICE"
-    
+
+    # Clone device common tree
+    print_status "Cloning device common tree..."
+    git clone "$DEVICE_COMMON_TREE_URL" -b "$DEVICE_COMMON_TREE_BRANCH" "device/realme/sm8250-common"
+
     # Clone vendor tree
     print_status "Cloning vendor tree..."
     git clone "$VENDOR_TREE_URL" -b "$VENDOR_TREE_BRANCH" "vendor/realme/$DEVICE"
+
+    # Clone vendor common tree
+    print_status "Cloning vendor common tree..."
+    git clone "$VENDOR_COMMON_TREE_URL" -b "$VENDOR_COMMON_TREE_BRANCH" "vendor/realme/sm8250-common"
     
     # Clone hardware/oplus
     print_status "Cloning hardware/oplus..."
