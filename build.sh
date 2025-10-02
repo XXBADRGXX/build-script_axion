@@ -16,36 +16,20 @@ NC='\033[0m' # No Color
 
 # Configuration
 ROM_NAME="AxionAOSP"
-DEVICE="spartan"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$HOME/axion"
 MANIFEST_URL="https://github.com/AxionAOSP/android.git"
 MANIFEST_BRANCH="lineage-23.0"
 SYNC_JOBS="24"
 
-# Build configuration - modify these as needed
-BUILD_VARIANT="userdebug"                        # Build variant: user, userdebug, eng
-GMS_VARIANT="vanilla"                            # GMS variant: vanilla, gms pico, gms core
-BUILD_TYPE="-b"                                  # Build type: -b (bacon), -fb (fastboot), -br (brunch)
+# Device configuration file (will be loaded from JSON)
+DEVICE_CONFIG_FILE=""
+DEVICE=""
 
-# Device-specific repositories
-DEVICE_TREE_URL="https://github.com/AxionAOSP-devices/android_device_realme_spartan.git"
-DEVICE_TREE_BRANCH="lineage-23.0"
-DEVICE_COMMON_TREE_URL="https://github.com/AxionAOSP-devices/android_device_realme_sm8250-common.git"
-DEVICE_COMMON_TREE_BRANCH="lineage-23.0"
-VENDOR_TREE_URL="https://github.com/AxionAOSP-devices/proprietary_vendor_realme_spartan.git"
-VENDOR_TREE_BRANCH="lineage-23.0"
-VENDOR_COMMON_TREE_URL="https://github.com/AxionAOSP-devices/proprietary_vendor_realme_sm8250-common.git"
-VENDOR_COMMON_TREE_BRANCH="lineage-23.0"
-HW_OPLUS_URL="https://github.com/AxionAOSP-devices/android_hardware_oplus.git"
-HW_OPLUS_BRANCH="lineage-23.0"
-KERNEL_TREE_URL="https://github.com/SM8250-Common/android_kernel_realme_sm8250.git"
-KERNEL_TREE_BRANCH="lineage-23.0"
-CAMERA_TREE_URL="https://gitlab.com/ryukftw/proprietary_vendor_oplus_camera.git"
-CAMERA_TREE_BRANCH="lineage-23.0"
-HW_DOLBY_URL="https://github.com/SM8250-Common/hardware_dolby.git"
-HW_DOLBY_BRANCH="16"
-SIGNING_KEYS_URL="https://github.com/bijoyv9/axion-keys.git"
-SIGNING_KEYS_BRANCH="master"
+# Build configuration - will be overridden by JSON or command line args
+BUILD_VARIANT="userdebug"
+GMS_VARIANT="vanilla"
+BUILD_TYPE="-b"
 
 # Function to print colored output
 print_status() {
@@ -70,6 +54,48 @@ check_command() {
         print_error "Command '$1' not found. Please install it first."
         exit 1
     fi
+}
+
+# Function to load device configuration from JSON
+load_device_config() {
+    local config_file="$1"
+
+    if [ ! -f "$config_file" ]; then
+        print_error "Device configuration file not found: $config_file"
+        exit 1
+    fi
+
+    # Check if jq is installed
+    if ! command -v jq &> /dev/null; then
+        print_error "jq is not installed. Please install it: sudo apt-get install jq"
+        exit 1
+    fi
+
+    print_status "Loading device configuration from $config_file"
+
+    # Export device configuration as global variables
+    DEVICE=$(jq -r '.device.codename' "$config_file")
+    DEVICE_FULL_NAME=$(jq -r '.device.full_name' "$config_file")
+    DEVICE_MANUFACTURER=$(jq -r '.device.manufacturer' "$config_file")
+
+    # Override build config from JSON if not set by command line
+    if [ -z "$BUILD_VARIANT_OVERRIDE" ]; then
+        BUILD_VARIANT=$(jq -r '.build.variant // "userdebug"' "$config_file")
+    fi
+    if [ -z "$GMS_VARIANT_OVERRIDE" ]; then
+        GMS_VARIANT=$(jq -r '.build.gms_variant // "vanilla"' "$config_file")
+    fi
+    if [ -z "$BUILD_TYPE_OVERRIDE" ]; then
+        BUILD_TYPE=$(jq -r '.build.build_type // "-b"' "$config_file")
+    fi
+
+    print_success "Device configuration loaded: $DEVICE ($DEVICE_FULL_NAME)"
+}
+
+# Function to get repository list from JSON
+get_repositories() {
+    local config_file="$1"
+    jq -r '.repositories | to_entries[] | .key' "$config_file"
 }
 
 # Function to check system requirements
@@ -138,27 +164,18 @@ sync_sources() {
 clean_device_repos() {
     print_status "Cleaning existing device repositories..."
     cd "$BUILD_DIR"
-    
-    # List of device repo directories to clean
-    DEVICE_DIRS=(
-        "device/realme/$DEVICE"
-        "device/realme/sm8250-common"
-        "vendor/realme/$DEVICE"
-        "vendor/realme/sm8250-common"
-        "hardware/oplus"
-        "hardware/dolby"
-        "kernel/realme/sm8250"
-        "vendor/oplus/camera"
-        "vendor/lineage-priv"
-    )
-    
-    for dir in "${DEVICE_DIRS[@]}"; do
-        if [ -d "$dir" ]; then
-            print_status "Removing $dir"
-            rm -rf "$dir"
+
+    # Get repository paths from JSON
+    local repos=$(get_repositories "$DEVICE_CONFIG_FILE")
+
+    for repo in $repos; do
+        local path=$(jq -r ".repositories.$repo.path" "$DEVICE_CONFIG_FILE")
+        if [ -d "$path" ]; then
+            print_status "Removing $path"
+            rm -rf "$path"
         fi
     done
-    
+
     print_success "Device repositories cleaned"
 }
 
@@ -166,43 +183,39 @@ clean_device_repos() {
 clone_device_repos() {
     print_status "Cloning device-specific repositories..."
     cd "$BUILD_DIR"
-    
-    # Clone device tree
-    print_status "Cloning device tree..."
-    git clone "$DEVICE_TREE_URL" -b "$DEVICE_TREE_BRANCH" "device/realme/$DEVICE"
 
-    # Clone device common tree
-    print_status "Cloning device common tree..."
-    git clone "$DEVICE_COMMON_TREE_URL" -b "$DEVICE_COMMON_TREE_BRANCH" "device/realme/sm8250-common"
+    # Get repository list from JSON
+    local repos=$(get_repositories "$DEVICE_CONFIG_FILE")
 
-    # Clone vendor tree
-    print_status "Cloning vendor tree..."
-    git clone "$VENDOR_TREE_URL" -b "$VENDOR_TREE_BRANCH" "vendor/realme/$DEVICE"
+    for repo in $repos; do
+        # Check if repository is optional and skip if marked
+        local optional=$(jq -r ".repositories.$repo.optional // false" "$DEVICE_CONFIG_FILE")
+        local url=$(jq -r ".repositories.$repo.url" "$DEVICE_CONFIG_FILE")
+        local branch=$(jq -r ".repositories.$repo.branch" "$DEVICE_CONFIG_FILE")
+        local path=$(jq -r ".repositories.$repo.path" "$DEVICE_CONFIG_FILE")
 
-    # Clone vendor common tree
-    print_status "Cloning vendor common tree..."
-    git clone "$VENDOR_COMMON_TREE_URL" -b "$VENDOR_COMMON_TREE_BRANCH" "vendor/realme/sm8250-common"
-    
-    # Clone hardware/oplus
-    print_status "Cloning hardware/oplus..."
-    git clone "$HW_OPLUS_URL" -b "$HW_OPLUS_BRANCH" "hardware/oplus"
-    
-    # Clone kernel tree
-    print_status "Cloning kernel tree..."
-    git clone "$KERNEL_TREE_URL" -b "$KERNEL_TREE_BRANCH" "kernel/realme/sm8250"
-    
-    # Clone camera tree
-    print_status "Cloning camera tree..."
-    git clone "$CAMERA_TREE_URL" -b "$CAMERA_TREE_BRANCH" "vendor/oplus/camera"
+        # Skip if URL is null or empty
+        if [ "$url" = "null" ] || [ -z "$url" ]; then
+            if [ "$optional" = "true" ]; then
+                print_status "Skipping optional repository: $repo"
+                continue
+            else
+                print_error "Required repository missing URL: $repo"
+                exit 1
+            fi
+        fi
 
-    # Clone hardware/dolby
-    print_status "Cloning hardware/dolby..."
-    git clone "$HW_DOLBY_URL" -b "$HW_DOLBY_BRANCH" "hardware/dolby"
+        print_status "Cloning $repo..."
+        if ! git clone "$url" -b "$branch" "$path"; then
+            if [ "$optional" = "true" ]; then
+                print_warning "Failed to clone optional repository: $repo"
+            else
+                print_error "Failed to clone required repository: $repo"
+                exit 1
+            fi
+        fi
+    done
 
-    # Clone signing keys
-    print_status "Cloning signing keys..."
-    git clone "$SIGNING_KEYS_URL" -b "$SIGNING_KEYS_BRANCH" "vendor/lineage-priv"
-    
     print_success "All device repositories cloned successfully"
 }
 
@@ -279,7 +292,9 @@ main() {
     clear
     echo -e "${BLUE}================================${NC}"
     echo -e "${BLUE}  $ROM_NAME Custom ROM Builder  ${NC}"
-    echo -e "${BLUE}  Device: Realme GT Neo 3t      ${NC}"
+    if [ -n "$DEVICE" ]; then
+        echo -e "${BLUE}  Device: $DEVICE_FULL_NAME     ${NC}"
+    fi
     echo -e "${BLUE}================================${NC}"
     echo
     
@@ -291,6 +306,26 @@ main() {
     
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --device|-d)
+                if [ -z "$2" ]; then
+                    print_error "Device argument requires a value"
+                    exit 1
+                fi
+                # Support both device name and full path
+                if [ -f "$2" ]; then
+                    DEVICE_CONFIG_FILE="$2"
+                elif [ -f "$SCRIPT_DIR/devices/$2.json" ]; then
+                    DEVICE_CONFIG_FILE="$SCRIPT_DIR/devices/$2.json"
+                elif [ -f "$SCRIPT_DIR/devices/$2" ]; then
+                    DEVICE_CONFIG_FILE="$SCRIPT_DIR/devices/$2"
+                else
+                    print_error "Device configuration not found: $2"
+                    echo "Available devices:"
+                    ls -1 "$SCRIPT_DIR/devices/"*.json 2>/dev/null | xargs -n1 basename | sed 's/.json$//' || echo "  No devices configured"
+                    exit 1
+                fi
+                shift 2
+                ;;
             --skip-sync)
                 SKIP_SYNC=true
                 shift
@@ -308,6 +343,7 @@ main() {
                 shift
                 ;;
             --gms)
+                GMS_VARIANT_OVERRIDE=true
                 case $2 in
                     pico|core)
                         GMS_VARIANT="gms $2"
@@ -320,10 +356,12 @@ main() {
                 esac
                 ;;
             --vanilla)
+                GMS_VARIANT_OVERRIDE=true
                 GMS_VARIANT="vanilla"
                 shift
                 ;;
             --variant)
+                BUILD_VARIANT_OVERRIDE=true
                 case $2 in
                     user|userdebug|eng)
                         BUILD_VARIANT="$2"
@@ -336,6 +374,7 @@ main() {
                 esac
                 ;;
             --build-type)
+                BUILD_TYPE_OVERRIDE=true
                 case $2 in
                     bacon|-b)
                         BUILD_TYPE="-b"
@@ -356,7 +395,12 @@ main() {
                 esac
                 ;;
             --help|-h)
-                echo "Usage: $0 [OPTIONS]"
+                echo "Usage: $0 --device <device> [OPTIONS]"
+                echo
+                echo "Required:"
+                echo "  --device, -d <name>   Device to build (e.g., spartan)"
+                echo "                        Use device name or path to JSON config file"
+                echo
                 echo "Options:"
                 echo "  --skip-sync           Skip source sync (useful for rebuilds)"
                 echo "  --clean               Clean build directory before building"
@@ -364,15 +408,18 @@ main() {
                 echo "  --skip-clone          Skip cloning device repositories"
                 echo "  --gms [pico|core]     Build with GMS (default: core)"
                 echo "  --vanilla             Build vanilla (no GMS)"
-                echo "  --variant <variant>   Build variant: user, userdebug, eng (default: userdebug)"
-                echo "  --build-type <type>   Build type: bacon, fastboot, brunch (default: bacon)"
+                echo "  --variant <variant>   Build variant: user, userdebug, eng"
+                echo "  --build-type <type>   Build type: bacon, fastboot, brunch"
                 echo "  --help, -h            Show this help message"
                 echo
+                echo "Available devices:"
+                ls -1 "$SCRIPT_DIR/devices/"*.json 2>/dev/null | xargs -n1 basename | sed 's/.json$//' | sed 's/^/  /' || echo "  No devices configured"
+                echo
                 echo "Examples:"
-                echo "  $0                    # Vanilla userdebug build"
-                echo "  $0 --gms core         # GMS core build"
-                echo "  $0 --gms pico         # GMS pico build"
-                echo "  $0 --variant user     # User variant build"
+                echo "  $0 --device spartan                    # Build for spartan device"
+                echo "  $0 -d spartan --gms core               # GMS core build for spartan"
+                echo "  $0 -d spartan --variant user           # User variant build for spartan"
+                echo "  $0 -d /path/to/custom.json             # Build with custom config"
                 exit 0
                 ;;
             *)
@@ -382,11 +429,26 @@ main() {
                 ;;
         esac
     done
-    
+
+    # Check if device is specified
+    if [ -z "$DEVICE_CONFIG_FILE" ]; then
+        print_error "No device specified. Use --device <name> to specify a device."
+        echo
+        echo "Available devices:"
+        ls -1 "$SCRIPT_DIR/devices/"*.json 2>/dev/null | xargs -n1 basename | sed 's/.json$//' | sed 's/^/  /' || echo "  No devices configured"
+        echo
+        echo "Use --help for more information."
+        exit 1
+    fi
+
+    # Load device configuration
+    load_device_config "$DEVICE_CONFIG_FILE"
+
     # Show configuration
     echo -e "${YELLOW}Build Configuration:${NC}"
     echo "  ROM: $ROM_NAME"
-    echo "  Device: $DEVICE"
+    echo "  Device: $DEVICE ($DEVICE_FULL_NAME)"
+    echo "  Config File: $DEVICE_CONFIG_FILE"
     echo "  Build Directory: $BUILD_DIR"
     echo "  Manifest Branch: $MANIFEST_BRANCH"
     echo "  Sync Jobs: $SYNC_JOBS"
@@ -437,9 +499,10 @@ main() {
         clone_device_repos
     else
         print_warning "Skipping device repository cloning as requested"
-        # Verify essential device repos exist
-        if [ ! -d "$BUILD_DIR/device/realme/$DEVICE" ]; then
-            print_error "Device tree not found. Cannot skip cloning without existing device repos."
+        # Verify essential device tree exists
+        local device_tree_path=$(jq -r '.repositories.device_tree.path' "$DEVICE_CONFIG_FILE")
+        if [ ! -d "$BUILD_DIR/$device_tree_path" ]; then
+            print_error "Device tree not found at $device_tree_path. Cannot skip cloning without existing device repos."
             exit 1
         fi
     fi
