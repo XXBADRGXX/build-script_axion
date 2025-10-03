@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# AxionAOSP Custom ROM Build Script
-# Device: Realme GT Neo 3T (spartan)
-# Author: Generated for bijoyv9
-# Created: August 30, 2025
+# Universal build script for AxionAOSP
+# Author: bijoyv9
 
 set -e  # Exit on any error
 
@@ -398,7 +396,7 @@ main() {
                 echo "Usage: $0 --device <device> [OPTIONS]"
                 echo
                 echo "Required:"
-                echo "  --device, -d <name>   Device to build (e.g., spartan)"
+                echo "  --device, -d <name>   Device to build"
                 echo "                        Use device name or path to JSON config file"
                 echo
                 echo "Options:"
@@ -416,9 +414,9 @@ main() {
                 ls -1 "$SCRIPT_DIR/devices/"*.json 2>/dev/null | xargs -n1 basename | sed 's/.json$//' | sed 's/^/  /' || echo "  No devices configured"
                 echo
                 echo "Examples:"
-                echo "  $0 --device spartan                    # Build for spartan device"
-                echo "  $0 -d spartan --gms core               # GMS core build for spartan"
-                echo "  $0 -d spartan --variant user           # User variant build for spartan"
+                echo "  $0 --device <device_name>              # Build for device"
+                echo "  $0 -d <device_name> --gms core         # GMS core build"
+                echo "  $0 -d <device_name> --variant user     # User variant build"
                 echo "  $0 -d /path/to/custom.json             # Build with custom config"
                 exit 0
                 ;;
