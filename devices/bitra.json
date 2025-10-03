@@ -7,12 +7,12 @@
   },
   "repositories": {
     "device_tree": {
-      "url": "https://github.com/SM8250-Common/android_device_realme_bitra.git",
-      "branch": "ax",
+      "url": "https://github.com/XXBADRGXX/android_device_realme_bitra.",
+      "branch": "lineage-23.0",
       "path": "device/realme/bitra"
     },
     "device_common_tree": {
-      "url": "https://github.com/AxionAOSP-devices/android_device_realme_sm8250-common.git",
+      "url": "https://github.com/XXBADRGXX/android_device_realme-sm8250-common",
       "branch": "lineage-23.0",
       "path": "device/realme/sm8250-common"
     },
@@ -32,8 +32,8 @@
       "path": "hardware/oplus"
     },
     "kernel_tree": {
-      "url": "https://github.com/bijoyv9/android_kernel_realme_sm8250.git",
-      "branch": "phoeniX-AOSP",
+      "url": "https://github.com/XXBADRGXX/kernel_realme_bitra",
+      "branch": "sixteen",
       "path": "kernel/realme/sm8250"
     },
     "camera_tree": {
